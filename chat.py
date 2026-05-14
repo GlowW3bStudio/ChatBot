@@ -19,7 +19,7 @@ async def ai_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         response = client.models.generate_content(
-            model="gemini-3.1-flash",
+            model="gemini-2.0-flash",
             contents=f"""
 မင်းက Telegram AI assistant တစ်ယောက်ဖြစ်တယ်။
 မြန်မာလို သဘာဝကျကျ၊ ဖော်ရွေပြီး တိုတိုရှင်းရှင်း ဖြေပေးပါ။
