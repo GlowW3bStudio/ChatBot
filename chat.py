@@ -22,7 +22,7 @@ except Exception as e:
 def get_model():
     try:
         # gemini-1.5-flash-latest ကို အရင်စမ်းမယ်
-        return genai.GenerativeModel('gemini-1.5-flash-latest')
+        return genai.GenerativeModel('gemini-1.5-flash')
     except:
         # အဆင်မပြေရင် Stable ဖြစ်တဲ့ gemini-pro ကို သုံးမယ်
         return genai.GenerativeModel('gemini-pro')
