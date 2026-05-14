@@ -1,57 +1,55 @@
 import os
 import logging
+import google.generativeai as genai
 from telegram import Update
-from telegram.ext import Application, MessageHandler, CommandHandler, filters, ContextTypes
-from google import genai
+from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, CommandHandler, filters
 
-logging.basicConfig(level=logging.INFO)
+# Logging setup (Render log မှာ အမှားရှာရလွယ်အောင်)
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+# Environment Variables ခေါ်ယူခြင်း
+TELEGRAM_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
 
-client = genai.Client(api_key=GEMINI_API_KEY)
+# Gemini AI ကို Setup လုပ်ခြင်း
+genai.configure(api_key=GEMINI_API_KEY)
+model = genai.GenerativeModel('gemini-1.5-flash') # gemini-pro ထက် ပိုမြန်တဲ့ flash ကို သုံးထားပါတယ်
 
+# /start command အတွက်
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("မင်္ဂလာပါ 🤖 မေးချင်တာကို မြန်မာလိုမေးလို့ရပါတယ်။")
+    await update.message.reply_text("မင်္ဂလာပါ။ Gemini AI Bot ကနေ ကြိုဆိုပါတယ်။ ဘာများ ကူညီပေးရမလဲခင်ဗျာ။")
 
-async def ai_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# စာသားတွေကို Gemini နဲ့ ပြန်ဖြေပေးမယ့် Function
+async def chat_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_text = update.message.text
-
+    
     try:
-        response = client.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=f"""
-မင်းက Telegram AI assistant တစ်ယောက်ဖြစ်တယ်။
-မြန်မာလို သဘာဝကျကျ၊ ဖော်ရွေပြီး တိုတိုရှင်းရှင်း ဖြေပေးပါ။
-
-User message:
-{user_text}
-"""
-        )
-
-        reply = response.text if response.text else "မဖြေနိုင်သေးပါဘူး 🥲"
-        await update.message.reply_text(reply)
-
+        # AI ဆီက အဖြေတောင်းခြင်း
+        response = model.generate_content(user_text)
+        
+        # User ဆီ ပြန်ပို့ခြင်း
+        if response.text:
+            await update.message.reply_text(response.text)
+        else:
+            await update.message.reply_text("စိတ်မရှိပါနဲ့၊ ကျွန်တော် ဒီမေးခွန်းကို မဖြေနိုင်လို့ပါ။")
+            
     except Exception as e:
-        logging.error(f"Gemini Error: {e}")
-        await update.message.reply_text(
-            "AI server busy ဖြစ်နေပါတယ် 🥲 ခဏနေရင်ပြန်မေးပေးပါ။"
-        )
+        logging.error(f"Error: {e}")
+        await update.message.reply_text("တောင်းပန်ပါတယ်။ ခဏတာ အဆင်မပြေမှု ဖြစ်သွားလို့ နောက်မှ ပြန်စမ်းကြည့်ပေးပါ။")
 
-def main():
-    if not BOT_TOKEN:
-        raise ValueError("BOT_TOKEN မရှိပါ။ Render Environment မှာထည့်ပါ။")
-
-    if not GEMINI_API_KEY:
-        raise ValueError("GEMINI_API_KEY မရှိပါ။ Render Environment မှာထည့်ပါ။")
-
-    app = Application.builder().token(BOT_TOKEN).build()
-
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, ai_reply))
-
-    print("Bot is running...")
-    app.run_polling()
-
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    # Token မရှိရင် Error ပေးဖို့
+    if not TELEGRAM_TOKEN or not GEMINI_API_KEY:
+        print("Error: API Keys များ မထည့်ရသေးပါ။ Environment Variables ကို စစ်ဆေးပါ။")
+    else:
+        application = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+        
+        # Handler များ ထည့်သွင်းခြင်း
+        application.add_handler(CommandHandler("start", start))
+        application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), chat_handler))
+        
+        print("Bot စတင် အလုပ်လုပ်နေပါပြီ...")
+        application.run_polling()
